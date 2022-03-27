@@ -112,17 +112,19 @@ app.post("/checkuserName", async (req, res, next) => {
   }
 });
 
-app.get("/userExists", async (req, res, next) => {
-  const email = req.query.email;
+app.post("/userExists", async (req, res, next) => {
+  const email = req.body.email;
+  console.log(email);
   try{
     await client.connect();
     console.log("Connected correctly to server");
     const collection = client.db("ethernals").collection("usernames");
-    const response = await collection.find({ email: email }).toArray();
+    const response = await collection.find({ email: email }).toArray()
+    console.log(response)
     if (response.length > 0) {
-      res.send(200, {"result": true});
+      res.status(200).send({"result": true});
     } else {
-      res.send(200, {"result": false});
+      res.status(200).send({"result": false});
     }
   }catch (err) {
     console.log(err);
@@ -185,49 +187,33 @@ app.post("/createProfile", async (req, res, next) => {
   }
 });
 
-app.post("/editPixel", async (req, res, next) => {
-  const pixelNum = Number(req.body.pixelNum);
-  const inputColor = req.body.color;
-  const message = req.body.message;
-  const title = req.body.title;
-  console.log(typeof pixelNum);
-  console.log(inputColor);
-  console.log(message);
-  console.log(title);
+app.post("/editProfile", async (req, res, next) => {
+  const username = req.body.username;
+  const data = req.body.data;
+  const body = data;
+  console.log(req.body.IpfsHash);
 
-  const body = {
-    pixelNum: pixelNum,
-    message: message,
-    color: inputColor,
-    title: title,
-  };
-
+  console.log(body);
   const options = {
     pinataMetadata: {
-      name: `Pixel #${pixelNum}`,
+      name: `User - ${username}`,
     },
     pinataOptions: {
       cidVersion: 0,
     },
   };
-
   try {
-    await client.connect();
-    const collection = client.db("ethernals").collection("usernames");
-    const resp = await collection.findOneAndUpdate(
-      { _id: pixelNum },
-      { $set: { color: inputColor } }
-    );
-    const response = await pinata.pinJSONToIPFS(body, options);
-
-    res.status(200).json({
-      message: "success",
-      ipfsHash: response.IpfsHash,
-      resp: resp,
-    });
-  } catch {
+    const deleteHash = await pinata.unpin(req.body.ipfsHash);
+      const result = await pinata.pinJSONToIPFS(body, options);
+      console.log(result);
+      res.status(200).json({
+        message: "success",
+        ipfsHash: result.IpfsHash,
+      });
+    
+  } catch(err) {
     res.status(500).json({
-      message: "There was an error editing the pixel :(",
+      message: "There was an error.",
     });
     next(err);
   } finally {
